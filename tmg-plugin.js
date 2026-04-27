@@ -1,9 +1,10 @@
 // TMG Plugin - Awin MasterTag + CM360 Floodlight Tracking
 // Supports dynamic advertiser parameters via URL query string
-// Usage: tmg-plugin.js?advertiserId=XXXXXX&type=XXXXXX&category=XXXXXX
-
+// Handles both Purchase Confirmation and Site Visit tracking in one plugin
+// Usage: tmg-plugin.js?advertiserId=XXXXXX&type=XXXXXX&category=XXXXXX&svtype=XXXXXX&svcategory=XXXXXX
+ 
 (function () {
-
+ 
   // READ PARAMETERS FROM URL
   function getScriptParams() {
     var scripts = document.querySelectorAll('script[src*="tmg-plugin.js"]');
@@ -23,26 +24,33 @@
     }
     return {};
   }
-
+ 
   var params = getScriptParams();
-  var advertiserId = params.advertiserId || '';
-  var floodlightType = params.type || '';
-  var floodlightCategory = params.category || '';
-
+ 
+  // PURCHASE CONFIRMATION parameters (unchanged from original)
+  var advertiserId       = params.advertiserId  || '';
+  var floodlightType     = params.type          || '';
+  var floodlightCategory = params.category      || '';
+ 
+  // SITE VISIT parameters (new — optional, only fire if svtype & svcategory are provided)
+  var svType             = params.svtype        || '';
+  var svCategory         = params.svcategory    || '';
+ 
   // PART 1 — Tell Awin about the purchase
   window.aw_tmg_q = window.aw_tmg_q || [];
-
+ 
   if (typeof window.aw_tmg_order === "object"
       && window.aw_tmg_order
       && window.aw_tmg_order.orderId
       && advertiserId) {
-
+ 
+    // ✅ PURCHASE PAGE — fire purchase event to Awin
     window.aw_tmg_q.push({
       event: "purchase",
       order: window.aw_tmg_order
     });
-
-    // PART 2 — Fire CM360 Floodlight → connects to DV360
+ 
+    // PART 2 — Fire CM360 Purchase Floodlight → connects to DV360
     if (advertiserId && floodlightType && floodlightCategory) {
       var floodlight = new Image(1, 1);
       floodlight.src = "https://ad.doubleclick.net/ddm/activity/src=" + advertiserId
@@ -56,9 +64,23 @@
         + ";ord=" + encodeURIComponent(window.aw_tmg_order.orderId || "")
         + "?";
     }
-
+ 
   } else {
+ 
+    // ✅ ALL OTHER PAGES — fire site visit event to Awin
     window.aw_tmg_q.push({ event: "other" });
+ 
+    // PART 3 — Fire CM360 Site Visit Floodlight (only if svtype & svcategory are provided)
+    if (advertiserId && svType && svCategory) {
+      var siteVisit = new Image(1, 1);
+      siteVisit.src = "https://ad.doubleclick.net/ddm/activity/src=" + advertiserId
+        + ";type=" + svType
+        + ";cat=" + svCategory
+        + ";ord=" + Math.round(Math.random() * 1000000000)
+        + "?";
+    }
+ 
   }
-
+ 
 })();
+ 
