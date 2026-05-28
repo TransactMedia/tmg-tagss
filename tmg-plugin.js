@@ -2,9 +2,9 @@
 // Supports dynamic advertiser parameters via URL query string
 // Handles both Purchase Confirmation and Site Visit tracking in one plugin
 // Usage: tmg-plugin.js?advertiserId=XXXXXX&type=XXXXXX&category=XXXXXX&svtype=XXXXXX&svcategory=XXXXXX
- 
+
 (function () {
- 
+
   // READ PARAMETERS FROM URL
   function getScriptParams() {
     var scripts = document.querySelectorAll('script[src*="tmg-plugin.js"]');
@@ -24,34 +24,43 @@
     }
     return {};
   }
- 
+
   var params = getScriptParams();
- 
-  // PURCHASE CONFIRMATION parameters (unchanged from original)
+
+  // PURCHASE CONFIRMATION parameters
   var advertiserId       = params.advertiserId  || '';
   var floodlightType     = params.type          || '';
   var floodlightCategory = params.category      || '';
- 
-  // SITE VISIT parameters (new — optional, only fire if svtype & svcategory are provided)
+
+  // SITE VISIT parameters (optional)
   var svType             = params.svtype        || '';
   var svCategory         = params.svcategory    || '';
- 
+
   // PART 1 — Tell Awin about the purchase
   window.aw_tmg_q = window.aw_tmg_q || [];
- 
+
   if (typeof window.aw_tmg_order === "object"
       && window.aw_tmg_order
       && window.aw_tmg_order.orderId
       && advertiserId) {
- 
+
     // ✅ PURCHASE PAGE — fire purchase event to Awin
     window.aw_tmg_q.push({
       event: "purchase",
       order: window.aw_tmg_order
     });
- 
+
     // PART 2 — Fire CM360 Purchase Floodlight → connects to DV360
     if (advertiserId && floodlightType && floodlightCategory) {
+
+      // Extract SKU from order items if available
+      var sku = '';
+      if (window.aw_tmg_order.items && window.aw_tmg_order.items.length > 0) {
+        sku = window.aw_tmg_order.items.map(function(item) {
+          return item.sku || item.productId || '';
+        }).filter(Boolean).join('|');
+      }
+
       var floodlight = new Image(1, 1);
       floodlight.src = "https://ad.doubleclick.net/ddm/activity/src=" + advertiserId
         + ";type=" + floodlightType
@@ -61,16 +70,18 @@
         + ";u1=" + encodeURIComponent(window.aw_tmg_order.orderId || "")
         + ";u2=" + encodeURIComponent(window.aw_tmg_order.totalAmount || "")
         + ";u3=" + encodeURIComponent(window.aw_tmg_order.currency || "GBP")
+        + ";u4=" + encodeURIComponent(window.aw_tmg_order.couponCode || "")
+        + ";u5=" + encodeURIComponent(sku)
         + ";ord=" + encodeURIComponent(window.aw_tmg_order.orderId || "")
         + "?";
     }
- 
+
   } else {
- 
+
     // ✅ ALL OTHER PAGES — fire site visit event to Awin
     window.aw_tmg_q.push({ event: "other" });
- 
-    // PART 3 — Fire CM360 Site Visit Floodlight (only if svtype & svcategory are provided)
+
+    // PART 3 — Fire CM360 Site Visit Floodlight (only if svtype & svcategory provided)
     if (advertiserId && svType && svCategory) {
       var siteVisit = new Image(1, 1);
       siteVisit.src = "https://ad.doubleclick.net/ddm/activity/src=" + advertiserId
@@ -79,8 +90,7 @@
         + ";ord=" + Math.round(Math.random() * 1000000000)
         + "?";
     }
- 
+
   }
- 
+
 })();
- 
