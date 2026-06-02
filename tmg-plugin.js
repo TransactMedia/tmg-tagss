@@ -44,9 +44,6 @@
       && window.aw_tmg_order.orderId
       && advertiserId) {
 
-    // DEBUG — remove after confirming SKU works
-    console.log('TMG Order Data:', JSON.stringify(window.aw_tmg_order));
-
     // ✅ PURCHASE PAGE — fire purchase event to Awin
     window.aw_tmg_q.push({
       event: "purchase",
@@ -56,35 +53,14 @@
     // PART 2 — Fire CM360 Purchase Floodlight → connects to DV360
     if (advertiserId && floodlightType && floodlightCategory) {
 
-      // Extract SKU — try multiple possible locations
+      // Extract SKU from aw_tmg_order.products array
+      // As confirmed by Florin: aw_tmg_order.products = [{id: "123"}, {id: "456"}]
       var sku = '';
-
-      // Try 1 — items array
-      if (window.aw_tmg_order.items && window.aw_tmg_order.items.length > 0) {
-        sku = window.aw_tmg_order.items.map(function(item) {
-          return item.sku || item.productId || item.id || '';
-        }).filter(Boolean).join('|');
-      }
-
-      // Try 2 — products array
-      if (!sku && window.aw_tmg_order.products && window.aw_tmg_order.products.length > 0) {
+      if (window.aw_tmg_order.products && window.aw_tmg_order.products.length > 0) {
         sku = window.aw_tmg_order.products.map(function(product) {
-          return product.sku || product.productId || product.id || '';
+          return product.id || '';
         }).filter(Boolean).join('|');
       }
-
-      // Try 3 — direct sku property
-      if (!sku && window.aw_tmg_order.sku) {
-        sku = window.aw_tmg_order.sku;
-      }
-
-      // Try 4 — direct productId property
-      if (!sku && window.aw_tmg_order.productId) {
-        sku = window.aw_tmg_order.productId;
-      }
-
-      // DEBUG — remove after confirming SKU works
-      console.log('TMG SKU extracted:', sku);
 
       var floodlight = new Image(1, 1);
       floodlight.src = "https://ad.doubleclick.net/ddm/activity/src=" + advertiserId
@@ -118,4 +94,4 @@
 
   }
 
-})();
+})(); 
